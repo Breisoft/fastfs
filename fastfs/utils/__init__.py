@@ -1,6 +1,6 @@
 # Utils
 from typing import Callable, Any, List, Union
-from fastfs.file_managers.fast_file_manager import fast_file_manager
+from file_managers.fast_file_manager import fast_file_manager
 from fastfs.types import FileTypes
 
 def get_fs_directory(absolute_path: bool = False):
@@ -10,8 +10,8 @@ def get_fs_directory(absolute_path: bool = False):
 def ls(directory_name: str) -> List[str]:
     return fast_file_manager.ls(directory_name)
 
-def sort_ls(directory_name: str, sort_by: Callable[[str], Any], reverse: bool=False) -> List[str]:
-    return fast_file_manager.sort_ls(directory_name, sort_by, reverse=reverse)
+def sorted_ls(directory_name: str, sort_by: Callable[[str], Any], reverse: bool=False) -> List[str]:
+    return fast_file_manager.sorted_ls(directory_name, sort_by, reverse=reverse)
 
 def file_exists(file_name: str) -> bool:
     return fast_file_manager.file_exists(file_name)

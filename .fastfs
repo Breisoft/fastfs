@@ -1,1 +1,4 @@
-files
+[DEFAULT]
+fastfs_directory = files
+fastfs_active = True
+

@@ -1,6 +1,6 @@
 from typing import Any, Union, List, Callable
 
-from fastfs.file_managers.fast_file_manager import fast_file_manager
+from file_managers.fast_file_manager import fast_file_manager
 
 def write_yaml(file_name: str, data: Any):
     fast_file_manager.write_yaml(file_name, data)

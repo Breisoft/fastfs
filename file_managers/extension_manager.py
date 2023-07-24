@@ -4,7 +4,6 @@ from typing import Any
 
 import json
 import pickle
-import configparser
 import csv
 
 from typing import Any, Callable, Union, List
@@ -72,18 +71,6 @@ class DefaultExtensionManager(BaseFileManager):
     @safe_read()
     def read_json(self, file):
         return json.load(file)
-    
-    @safe_write()
-    def write_ini(self, file, data: dict):
-        config = configparser.ConfigParser()
-        config.read_dict(data)
-        config.write(file)
-
-    @safe_read()
-    def read_ini(self, file):
-        config = configparser.ConfigParser()
-        config.read_file(file)
-        return {s:dict(config.items(s)) for s in config.sections()}
 
 
 class ExtensionFileManager(DefaultExtensionManager):

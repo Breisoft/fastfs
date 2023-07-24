@@ -1,6 +1,6 @@
 from typing import Any, Union, List, Callable
 
-from fastfs.file_managers.fast_file_manager import fast_file_manager
+from file_managers.fast_file_manager import fast_file_manager
 
 def write_pickle(file_name: str, file_data: Any):
     fast_file_manager.write_pickle(file_name, file_data)
@@ -23,31 +23,15 @@ def read_json(file_name: str) -> Union[dict, list]:
 def read_file(file_name: str) -> Any:
     return fast_file_manager.read_file(file_name)
 
-def file_exists(file_name: str) -> bool:
-    return fast_file_manager.file_exists(file_name)
-
-def touch_file(file_name: str):
-    return fast_file_manager.touch_file(file_name)
-
-def delete_file(file_name: str):
-    fast_file_manager.delete_file(file_name)
-
-def touch_directory(directory_name: str):
-    fast_file_manager.touch_directory(directory_name)
-
 def write_lines(file_name: str, lines: list) -> Any:
     fast_file_manager.write_lines(file_name, lines)
 
 def read_lines(file_name: str) -> Any:
     return fast_file_manager.read_lines(file_name)
 
+def create_fs(directory_name: str = 'files', active: bool=True):
+    fast_file_manager.create_fs(directory_name, active=active)
 
-def get_fs_directory(absolute_path: bool = False):
+def sorted_ls(directory_name: str, sort_by: Callable[[str], Any], reverse: bool=False):
+    return fast_file_manager.sorted_ls(directory_name, sort_by, reverse=reverse)
 
-    return fast_file_manager.get_fs_directory(absolute_path=absolute_path)
-
-def create_fs(directory_name: str = 'files'):
-    fast_file_manager.create_fs(directory_name)
-
-def sort_ls(directory_name: str, sort_by: Callable[[str], Any], reverse: bool=False):
-    return fast_file_manager.sort_ls(directory_name, sort_by, reverse=reverse)
