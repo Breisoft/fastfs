@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class FileTypes(Enum):
     PICKLE = ('pickle', 'pkl')
     JSON = 'json'
@@ -8,4 +9,3 @@ class FileTypes(Enum):
     HDF5 = 'hdf5'
     INI = 'ini'
     YAML = ('yaml', 'yml')
-    XML = 'xml'

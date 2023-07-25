@@ -2,33 +2,11 @@ import os
 
 from typing import Any, Callable, Union, List
 
-import traceback
 import shutil
 import configparser
 
-
-def path_replace(func):
-    def wrapper(self, file_path, *args, **kwargs):
-        file_path = self._path_replace(file_path)
-        return func(self, file_path, *args, **kwargs)
-    return wrapper
-
-
-def safe_write(write_mode='w'):
-    def decorator(func):
-        def wrapper(self, file_name: str, file_data: Any, *args, **kwargs):
-            self._safe_write_func(func, file_name, file_data,
-                                  write_mode, *args, **kwargs)
-        return wrapper
-    return decorator
-
-
-def safe_read(read_mode='r', context_manager=True):
-    def decorator(func):
-        def wrapper(self, file_name: str, *args, **kwargs):
-            return self._safe_read_func(func, file_name, read_mode, context_manager, *args, **kwargs)
-        return wrapper
-    return decorator
+from fastfs.exceptions import FileWriteError, FileReadError, FileNotFound, InvalidFileDataError
+from fastfs.decorators import path_replace, safe_read, safe_write
 
 
 class BaseFileManager():
@@ -89,26 +67,36 @@ class BaseFileManager():
     #         Basic file logic         #
     ####################################
 
-    def _safe_write_func(self, func: Callable, file_name: str, file_data: Any, write_mode='w', encoding='utf-8', *args, **kwargs):
-        file_name = self._path_replace(file_name)
+    @path_replace
+    def _safe_write_func(self, file_name: str, func: Callable, file_data: Any, write_mode='w', encoding='utf-8', *args, **kwargs):
 
-        # Open the file in write mode
-        with open(file_name, write_mode, encoding=encoding) as file:
-            # Call the decorated function
-            func(self, file, file_data, *args, **kwargs)
-
-    def _safe_read_func(self, func: Callable, file_name: str, read_mode='r', context_manager=True, encoding='utf-8', *args, **kwargs):
-        file_name = self._path_replace(file_name)
-
-        if context_manager:
-            with open(file_name, read_mode, encoding=encoding) as file:
+        try:
+            # Open the file in write mode
+            with open(file_name, write_mode, encoding=encoding) as file:
                 # Call the decorated function
+                func(self, file, file_data, *args, **kwargs)
+        except (OSError, PermissionError, IsADirectoryError, InvalidFileDataError) as exc:
+            raise FileWriteError from exc
+
+    @path_replace
+    def _safe_read_func(self, file_name: str, func: Callable, read_mode='r', context_manager=True, encoding='utf-8', *args, **kwargs):
+
+        try:
+
+            if context_manager:
+                with open(file_name, read_mode, encoding=encoding) as file:
+                    # Call the decorated function
+                    return func(self, file, *args, **kwargs)
+
+            else:
+                file = open(file_name, read_mode, encoding=encoding)
+
                 return func(self, file, *args, **kwargs)
 
-        else:
-            file = open(file_name, read_mode, encoding=encoding)
-
-            return func(self, file, *args, **kwargs)
+        except FileNotFoundError as exc:
+            raise FileNotFound(file_name) from exc
+        except (OSError, PermissionError, IsADirectoryError) as exc:
+            raise FileReadError from exc
 
     @path_replace
     def is_hidden_file(self, file_name):
@@ -166,10 +154,6 @@ class BaseFileManager():
 
         return sorted(ls, key=sort_by, reverse=reverse)
 
-    ####################################
-    #   Actual implementations below   #
-    ####################################
-
     @safe_write()
     def write_file(self, file, file_data):
         if not isinstance(file_data, str):
@@ -192,12 +176,37 @@ class BaseFileManager():
     @safe_write()
     def write_ini(self, file, data: dict):
 
-        config = configparser.ConfigParser()
-        config.read_dict(data)
+        try:
+
+            config = configparser.ConfigParser()
+            config.read_dict(data)
+
+        except configparser.DuplicateSectionError as exc:
+            raise InvalidFileDataError(
+                'Duplicate section found in data.') from exc
+        except configparser.DuplicateOptionError as exc:
+            raise InvalidFileDataError(
+                'Duplicate option in selection found.') from exc
+        except ValueError as exc:
+            raise InvalidFileDataError(
+                'For .INI files, keys are section names, values are dictionaries with keys and values that should be present in the section.') from exc
+
         config.write(file)
 
     @safe_read()
     def read_ini(self, file):
         config = configparser.ConfigParser()
-        config.read_file(file)
+
+        try:
+            config.read_file(file)
+        except configparser.ParsingError as exc:
+            raise InvalidFileDataError(
+                'The file could not be parsed.') from exc
+        except configparser.DuplicateSectionError as exc:
+            raise InvalidFileDataError(
+                'Duplicate section found in the file.') from exc
+        except configparser.DuplicateOptionError as exc:
+            raise InvalidFileDataError(
+                'Duplicate option in a section found in the file.') from exc
+
         return {s: dict(config.items(s)) for s in config.sections()}
