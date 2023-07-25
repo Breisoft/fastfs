@@ -1,11 +1,16 @@
 import os
 
-from typing import Any, Callable, Union, List
+from typing import Any, Callable, Union, List, Dict, Tuple
 
 import shutil
 import configparser
 
-from fastfs.exceptions import FileWriteError, FileReadError, FileNotFound, InvalidFileDataError
+import json
+import pickle
+import csv
+
+
+from fastfs.exceptions import FileWriteError, FileReadError, FileNotFound, InvalidFileDataError, CorruptFileError
 from fastfs.decorators import path_replace, safe_read, safe_write
 
 
@@ -17,7 +22,7 @@ class BaseFileManager():
 
     def _read_local_fs(self):
         if not os.path.exists('.fastfs'):
-            return None
+            return None, False
 
         fast_fs_config = self.read_ini('.fastfs')
 
@@ -56,21 +61,19 @@ class BaseFileManager():
 
         self.touch_directory(directory_name)
 
-        config = {'DEFAULT': {
-            'fastfs_directory': directory_name, 'fastfs_active': active}}
+        config = {'directory': directory_name, 'active': active}
 
         self.write_ini('.fastfs', config)
         self._local_fs = directory_name
         self._fs_active = active
-
-    ####################################
-    #         Basic file logic         #
-    ####################################
-
+        
     @path_replace
     def _safe_write_func(self, file_name: str, func: Callable, file_data: Any, write_mode='w', encoding='utf-8', *args, **kwargs):
 
         try:
+
+            encoding = None if 'b' in write_mode else encoding
+
             # Open the file in write mode
             with open(file_name, write_mode, encoding=encoding) as file:
                 # Call the decorated function
@@ -82,6 +85,8 @@ class BaseFileManager():
     def _safe_read_func(self, file_name: str, func: Callable, read_mode='r', context_manager=True, encoding='utf-8', *args, **kwargs):
 
         try:
+
+            encoding = None if 'b' in read_mode else encoding
 
             if context_manager:
                 with open(file_name, read_mode, encoding=encoding) as file:
@@ -111,11 +116,14 @@ class BaseFileManager():
 
     @path_replace
     def file_exists(self, file_name: str) -> bool:
+
         return os.path.exists(file_name)
 
     def get_fs_directory(self, absolute_path=False):
         if self.file_exists('.fastfs'):
-            path = self.read_file('.fastfs')
+            config = self.read_ini('.fastfs')
+
+            path = config['directory']
 
             if absolute_path:
                 path = os.path.abspath(path)
@@ -165,7 +173,7 @@ class BaseFileManager():
     def read_file(self, file):
         return file.read()
 
-    @safe_write()
+    @path_replace
     def touch_file(self, file_name: str):
         if not self.file_exists(file_name):
             self.write_file(file_name, '')
@@ -174,13 +182,21 @@ class BaseFileManager():
     # so that we can use it for .fastfs config
 
     @safe_write()
-    def write_ini(self, file, data: dict):
+    def write_ini(self, file, data: Union[Dict[Any, Dict[Any, Any]], Dict[Any, Any]]):
+
+        # not a dict or is an empty dict
+        if not isinstance(data, dict) or not data:
+            raise InvalidFileDataError('INI input data must either be a dict or a dict of dicts.')
+
+        first_key = next(iter(data))
+
+        # If it's a flat dict, nest it in another dict under 'DEFAULT' key
+        if not isinstance(data[first_key], dict):
+            data = {'DEFAULT': data}
 
         try:
-
             config = configparser.ConfigParser()
             config.read_dict(data)
-
         except configparser.DuplicateSectionError as exc:
             raise InvalidFileDataError(
                 'Duplicate section found in data.') from exc
@@ -194,7 +210,7 @@ class BaseFileManager():
         config.write(file)
 
     @safe_read()
-    def read_ini(self, file):
+    def read_ini(self, file) -> Union[Dict[Any, Dict[Any, Any]], Dict[Any, Any]]:
         config = configparser.ConfigParser()
 
         try:
@@ -208,5 +224,124 @@ class BaseFileManager():
         except configparser.DuplicateOptionError as exc:
             raise InvalidFileDataError(
                 'Duplicate option in a section found in the file.') from exc
+        
+        # DEFAULT not included in config.sections()
+        data_dict = {'DEFAULT': dict(config['DEFAULT'])}
 
-        return {s: dict(config.items(s)) for s in config.sections()}
+        for section in config.sections():
+            data_dict[section] = dict(config.items(section))
+
+        # Return flat dictionary if there's only 'DEFAULT' section
+        if len(data_dict.keys()) == 1 and 'DEFAULT' in data_dict:
+            return data_dict['DEFAULT']
+
+        return data_dict
+
+
+
+class BaseFileExtensionManager(BaseFileManager):
+
+    @safe_write(write_mode='wb')
+    def write_binary(self, file, file_data: bytes):
+        if not isinstance(file_data, bytes):
+            raise ValueError("Data should be bytes for writing binary.")
+        file.write(file_data)
+
+    @safe_read(read_mode='rb')
+    def read_binary(self, file):
+        return file.read()
+
+    @safe_write(write_mode='wb')
+    def write_pickle(self, file, file_data):
+
+        try:
+            pickle.dump(file_data, file)
+        except pickle.PicklingError as exc:
+            raise InvalidFileDataError(
+                'Object may not be serializable.') from exc
+        except (OverflowError, MemoryError, AttributeError) as exc:
+            raise FileWriteError from exc
+
+    @safe_read(read_mode='rb')
+    def read_pickle(self, file):
+
+        try:
+            return pickle.load(file)
+        except pickle.UnpicklingError as exc:
+            raise CorruptFileError('Failed to unpickle the file.') from exc
+        except EOFError as exc:
+            raise CorruptFileError(
+                'Unexpected end of file while reading pickle data.') from exc
+        except AttributeError as exc:
+            raise CorruptFileError(
+                'A required attribute was not found.') from exc
+        except ImportError as exc:
+            raise MissingDependencyError(
+                '(see above exception)') from exc
+        except pickle.PickleError as exc:
+            raise CorruptFileError(
+                'An error occured while unpickling.') from exc
+
+    @safe_write()
+    def write_json(self, file, file_data):
+
+        try:
+            json.dump(file_data, file)
+        except TypeError as exc:
+            raise InvalidFileDataError(
+                'Failed to serialize the data.') from exc
+        except OverflowError as exc:
+            raise InvalidFileDataError(
+                'The data is too deeply nested.') from exc
+        except json.JSONDecodeError as exc:
+            raise InvalidFileDataError('Could not encode JSON.') from exc
+
+    @safe_read()
+    def read_json(self, file):
+        try:
+            return json.load(file)
+        except json.JSONDecodeError as exc:
+            raise InvalidFileDataError('Could not decode JSON.') from exc
+
+    @safe_write()
+    def write_csv(self, file, file_data: Union[List[dict], List[list]], header: Union[None, list] = None):
+
+        first_item = file_data[0]
+
+        try:
+
+            if isinstance(first_item, dict):
+                field_names = first_item.keys()
+                writer = csv.DictWriter(file, fieldnames=field_names)
+                writer.writeheader()
+            else:
+                if header is None:
+                    raise InvalidFileDataError(
+                        "A header is required when using a list of lists for CSV file data.")
+
+                writer = csv.writer(file)
+                writer.writerow(header)
+
+            # Write the actual data
+            writer.writerows(file_data)
+        except csv.Error as exc:
+            raise InvalidFileDataError('Failed to write CSV data.') from exc
+        except (AttributeError, TypeError) as exc:
+            raise InvalidFileDataError('The data is not writable.') from exc
+        
+    @safe_read()
+    def read_csv(self, file, return_list_of_dicts: bool = False) -> Union[Tuple[List[str], List[List[str]]], List[dict]]:
+        try:
+            if return_list_of_dicts:
+                reader = csv.DictReader(file)
+                return list(reader)
+            else:
+                reader = csv.reader(file)
+                headers = next(reader)  # First line should be headers
+                data = list(reader)
+                return headers, data
+
+        except csv.Error as exc:
+            raise InvalidFileDataError('Failed to read CSV data.') from exc
+        except (AttributeError, TypeError) as exc:
+            raise InvalidFileDataError('The data is not readable.') from exc

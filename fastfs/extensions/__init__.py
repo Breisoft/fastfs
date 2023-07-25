@@ -1,6 +1,6 @@
 from typing import Any, Union, List, Callable
 
-from file_managers.fast_file_manager import fast_file_manager
+from fastfs.file_managers.fast_file_manager import fast_file_manager
 
 
 def write_yaml(file_name: str, data: Any):
@@ -49,3 +49,5 @@ def read_hdf5(file_name: str) -> Any:
         Any: The data read from the HDF5 file.
     """
     return fast_file_manager.read_hdf5(file_name)
+
+

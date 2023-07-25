@@ -1,4 +1,4 @@
-from fastfs.file_managers.extension_manager import ExtensionFileManager
+from fastfs.file_managers.base_file_manager import BaseFileExtensionManager
 from fastfs.data_types import FileTypes
 from fastfs.decorators import safe_read, safe_write, path_replace
 
@@ -11,7 +11,7 @@ import os
 import time
 
 
-class AbstractFileManager(ExtensionFileManager):
+class AbstractFileManager(BaseFileExtensionManager):
 
     @path_replace
     def get_file_extension(self, file_name):

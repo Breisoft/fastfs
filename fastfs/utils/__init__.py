@@ -1,6 +1,6 @@
 # Utils
 from typing import Callable, Any, List, Union
-from file_managers.fast_file_manager import fast_file_manager
+from fastfs.file_managers.fast_file_manager import fast_file_manager
 from fastfs.data_types import FileTypes
 
 
@@ -29,20 +29,31 @@ def ls(directory_name: str) -> List[str]:
     """
     return fast_file_manager.ls(directory_name)
 
-
 def sorted_ls(directory_name: str, sort_by: Callable[[str], Any], reverse: bool = False) -> List[str]:
     """
-    Lists all files in the given directory, sorted based on the given sorting function.
+    Lists all files in a directory, sorted based on the given sorting function.
 
     Args:
-        directory_name: The name/path of the directory.
-        sort_by: A callable that takes a file name as its argument and returns a sorting key.
+        directory_name: The name/path of the directory to list files from.
+        sort_by: A callable function that takes a file name as input and returns a sorting key.
         reverse: If True, sorts the files in reverse order.
 
     Returns:
         List[str]: A list of sorted file names in the directory.
     """
     return fast_file_manager.sorted_ls(directory_name, sort_by, reverse=reverse)
+
+
+def create_fs(directory_name: str = 'files', active: bool = True):
+    """
+    Creates a new fastfs directory.
+
+    Args:
+        directory_name: The name/path of the new directory.
+        active: If True, sets the new directory as the active fastfs directory.
+    """
+    fast_file_manager.create_fs(directory_name, active=active)
+
 
 
 def file_exists(file_name: str) -> bool:
@@ -86,7 +97,7 @@ def delete_directory(directory_name: str):
     Deletes the directory with the given name.
 
     Args:
-        directory_name: The name of the directory to delete.
+        directory_name: The name/path of the directory to delete.
 
     Raises:
         FileNotFoundError: If the directory does not exist.
