@@ -66,9 +66,10 @@ class BaseFileManager():
         self.write_ini('.fastfs', config)
         self._local_fs = directory_name
         self._fs_active = active
-        
+
     @path_replace
-    def _safe_write_func(self, file_name: str, func: Callable, file_data: Any, write_mode='w', encoding='utf-8', *args, **kwargs):
+    def _safe_write_func(self, file_name: str, func: Callable, file_data: Any,
+                         write_mode='w', encoding='utf-8', *args, **kwargs):
 
         try:
 
@@ -82,7 +83,8 @@ class BaseFileManager():
             raise FileWriteError from exc
 
     @path_replace
-    def _safe_read_func(self, file_name: str, func: Callable, read_mode='r', context_manager=True, encoding='utf-8', *args, **kwargs):
+    def _safe_read_func(self, file_name: str, func: Callable, read_mode='r',
+                        context_manager=True, encoding='utf-8', *args, **kwargs):
 
         try:
 
@@ -186,7 +188,8 @@ class BaseFileManager():
 
         # not a dict or is an empty dict
         if not isinstance(data, dict) or not data:
-            raise InvalidFileDataError('INI input data must either be a dict or a dict of dicts.')
+            raise InvalidFileDataError(
+                'INI input data must either be a dict or a dict of dicts.')
 
         first_key = next(iter(data))
 
@@ -224,7 +227,7 @@ class BaseFileManager():
         except configparser.DuplicateOptionError as exc:
             raise InvalidFileDataError(
                 'Duplicate option in a section found in the file.') from exc
-        
+
         # DEFAULT not included in config.sections()
         data_dict = {'DEFAULT': dict(config['DEFAULT'])}
 
@@ -236,7 +239,6 @@ class BaseFileManager():
             return data_dict['DEFAULT']
 
         return data_dict
-
 
 
 class BaseFileExtensionManager(BaseFileManager):
@@ -328,7 +330,7 @@ class BaseFileExtensionManager(BaseFileManager):
             raise InvalidFileDataError('Failed to write CSV data.') from exc
         except (AttributeError, TypeError) as exc:
             raise InvalidFileDataError('The data is not writable.') from exc
-        
+
     @safe_read()
     def read_csv(self, file, return_list_of_dicts: bool = False) -> Union[Tuple[List[str], List[List[str]]], List[dict]]:
         try:
