@@ -3,14 +3,15 @@ import json
 import pickle
 import unittest
 from unittest.mock import patch, ANY
-from fastfs import write_pickle 
+from fastfs import write_pickle
 from fastfs.utils import create_fs, get_fs_directory, touch_directory
 
-from fastfs.file_managers.fast_file_manager import fast_file_manager
+from fastfs.global_instance import fast_file_manager
 
 import configparser
 
 import shutil
+
 
 class FastFSDirectoryTests(unittest.TestCase):
     """Tests the functionality of the .fastfs relative file system"""
@@ -26,7 +27,6 @@ class FastFSDirectoryTests(unittest.TestCase):
         # Create fs directory
         create_fs(self.fast_fs_dir, active=True)
 
-
     def _reset_fs_directory(self):
         if os.path.exists(self.fast_fs_dir):
             shutil.rmtree(self.fast_fs_dir)
@@ -40,7 +40,6 @@ class FastFSDirectoryTests(unittest.TestCase):
     def tearDown(self):
         self._reset_fs_directory()
 
-
     def _test_create_fs(self, test_active):
 
         # Since it's created by default in setUp()
@@ -49,9 +48,10 @@ class FastFSDirectoryTests(unittest.TestCase):
         create_fs(self.fast_fs_dir, test_active)
 
         # Make sure files got created properly
-        self.assertTrue(os.path.exists(self.fast_fs_dir), f'{self.fast_fs_dir} does not exist')
+        self.assertTrue(os.path.exists(self.fast_fs_dir),
+                        f'{self.fast_fs_dir} does not exist')
         self.assertTrue(os.path.exists('.fastfs'), '.fastfs does not exist')
-        
+
         # Create a ConfigParser object
         config = configparser.ConfigParser()
 
@@ -59,21 +59,25 @@ class FastFSDirectoryTests(unittest.TestCase):
         config.read('.fastfs')
 
         # Test that all of the values are in the config
-        self.assertIn('DEFAULT', config, 'DEFAULT section missing from .fastfs')
-        self.assertIn('directory', config['DEFAULT'], 'directory missing from DEFAULT section')
-        self.assertIn('active', config['DEFAULT'], 'active missing from DEFAULT section')
+        self.assertIn('DEFAULT', config,
+                      'DEFAULT section missing from .fastfs')
+        self.assertIn('directory', config['DEFAULT'],
+                      'directory missing from DEFAULT section')
+        self.assertIn('active', config['DEFAULT'],
+                      'active missing from DEFAULT section')
 
         # Test that directory and active are proper values
         self.assertEqual(config['DEFAULT']['directory'], self.fast_fs_dir)
 
         active = config.getboolean('DEFAULT', 'active')
 
-        self.assertEqual(active, test_active, '.fastfs active is not the correct value!')
+        self.assertEqual(active, test_active,
+                         '.fastfs active is not the correct value!')
 
     def test_create_fs_active(self):
 
         self._test_create_fs(True)
-        
+
     def test_create_fs_inactive(self):
 
         self._test_create_fs(False)
@@ -118,12 +122,11 @@ class FastFSDirectoryTests(unittest.TestCase):
         self.assertTrue(os.path.exists(full_path))
 
         # Make sure fastfs directory wasn't in use despite it being enabled because we're using an abs path
-        self.assertFalse(os.path.exists(os.path.join(self.fast_fs_dir, test_directory)))
+        self.assertFalse(os.path.exists(
+            os.path.join(self.fast_fs_dir, test_directory)))
 
         # Delete the test directory
         shutil.rmtree(full_path)
-
-
 
 
 if __name__ == "__main__":

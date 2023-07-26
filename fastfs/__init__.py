@@ -1,6 +1,6 @@
 from typing import Any, Union, List, Tuple, Dict
 
-from fastfs.file_managers.fast_file_manager import fast_file_manager
+from fastfs.global_instance import fast_file_manager
 
 
 def write_pickle(file_name: str, file_data: Any):
@@ -35,6 +35,7 @@ def write_csv(file_name: str, file_data: Union[List[dict], List[list]], header: 
         header: An optional list of header values. If provided, this will be written as the first row in the CSV file.
     """
     fast_file_manager.write_csv(file_name, file_data, header=header)
+
 
 def read_csv(file_name: str, return_list_of_dicts: bool = False) -> Union[Tuple[List[str], List[List[str]]], List[dict]]:
     """
@@ -135,6 +136,7 @@ def write_ini(file_name: str, data: Union[Dict[Any, Dict[Any, Any]], Dict[Any, A
         If data is only a dict, the data will be written to under the 'DEFAULT' section.
     """
     fast_file_manager.write_ini(file_name, data)
+
 
 def read_ini(file_name: str) -> Union[Dict[Any, Dict[Any, Any]], Dict[Any, Any]]:
     """

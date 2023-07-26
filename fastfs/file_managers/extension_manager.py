@@ -1,9 +1,10 @@
 from fastfs.file_managers.abstract_file_manager import AbstractFileManager
 from fastfs.decorators import safe_read, safe_write, path_replace
 
-from typing import Any, List
+from typing import Any, List, Union
 
 from fastfs.exceptions import InvalidFileDataError, CorruptFileError, FileNotFound, MissingDependencyError, FileWriteError, FileReadError, UnsupportedFileType
+
 
 try:
     import yaml
@@ -14,6 +15,7 @@ try:
     import h5py
 except ImportError:
     h5py = None
+
 
 try:
     import pandas as pd
@@ -68,10 +70,15 @@ class ExtensionFileManager(AbstractFileManager):
             raise FileReadError from exc
 
     @path_replace
-    def write_dataframe(self, file_name: str, dataframe: 'pd.DataFrame', sep: str=',', header: bool=True, index: bool=True):
+    def write_dataframe(self, file_name: str, dataframe: 'pd.DataFrame', sep: str = ',', header: Union[bool, List[str]] = True, index: bool = True):
         try:
             if pd is None:
                 raise MissingDependencyError("pandas")
+
+            file_extension = self.get_file_extension(file_name)
+
+            if file_extension != '.csv':
+                file_name = file_name.replace(file_extension, '.csv')
 
             dataframe.to_csv(file_name, sep=sep, header=header, index=index)
 
@@ -79,18 +86,18 @@ class ExtensionFileManager(AbstractFileManager):
             raise FileWriteError from exc
 
     @path_replace
-    def read_dataframe(self, file_name: str, sep: str=',') -> 'pd.DataFrame':
+    def read_dataframe(self, file_name: str, sep: str = ',') -> 'pd.DataFrame':
         try:
             if pd is None:
                 raise MissingDependencyError("pandas")
 
             file_extension = self.get_file_extension(file_name)
 
-            if file_extension == 'csv':
+            if file_extension == '.csv':
                 return pd.read_csv(file_name, sep=sep)
-            elif file_extension in ('pickle', 'pkl'):
+            elif file_extension in ('.pickle', '.pkl'):
                 return pd.read_pickle(file_name)
-            elif file_extension == 'json':
+            elif file_extension == '.json':
                 return pd.read_json(file_name)
             else:
                 raise UnsupportedFileType(file_extension)

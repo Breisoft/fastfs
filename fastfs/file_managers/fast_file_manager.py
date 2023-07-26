@@ -1,9 +1,6 @@
-from fastfs.file_managers.abstract_file_manager import AbstractFileManager
+from fastfs.file_managers.extension_manager import ExtensionFileManager
 
 
-class FastFileManager(AbstractFileManager):
+class FastFileManager(ExtensionFileManager):
+    # Leave this to support multi-class inheritance in the future
     pass
-
-
-# creating a global FileManager instance
-fast_file_manager = FastFileManager()
